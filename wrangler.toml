@@ -1,0 +1,32 @@
+name = "shorty"
+type = "webpack"
+compatibility_date = "2021-12-29"
+account_id = "7d7c46cb78caf55f50413823c1dc2b2e"
+workers_dev = true
+zone_id = "e519b9c151be482311ac584c95f89f4c"
+
+kv_namespaces = [
+    { binding = "SHORTY", id = "13f8192f4dad47f5b292a325256d7c2c", preview_id = "0dec898db34243e29644930a58c76d19" }
+]
+
+[env.staging]
+name = "shorty-staging"
+vars = { ENVIRONMENT = "staging" }
+route = "ss.albanta.eu/*"
+
+kv_namespaces = [
+    { binding = "SHORTY", id = "ef18c3c29f584cb694e85d3638ae04fd", preview_id = "0dec898db34243e29644930a58c76d19" }
+]
+
+[env.production]
+name = "shorty-production"
+vars = { ENVIRONMENT = "production" }
+route = "s.albanta.eu/*"
+
+kv_namespaces = [
+    { binding = "SHORTY", id = "31e35286c7d04c3a88add1f4a0093e06", preview_id = "0dec898db34243e29644930a58c76d19" }
+]
+
+[site]
+bucket = "./public"
+entry-point = "workers-site"

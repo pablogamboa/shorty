@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Shorty</title>
+  <meta charset="utf-8">
+  <meta name="description" content="A simple URL shortener.">
+  <meta name="author" content="Pablo Martí Gamboa">
+  <meta property="og:title" content="Shorty: A simple URL shortener">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://s.albanta.eu/">
+  <meta property="og:description" content="A simple URL shortener.">
+  <meta property="og:image" content="static/img/banner.png">
+
+  <script src="https://unpkg.com/vue@3.2.26"></script>
+  <link rel="stylesheet" href="static/css/style.css" />
+  <link rel="icon" type="image/png" href="static/img/favicon.png">
+</head>
+
+<body>
+  <div id="app">
+    <div class="container">
+      <img src="static/img/logo.png" alt="Logo">
+      <h1>Shorten a URL</h1>
+      <p>Fill in the URL you want to shorten below.</p>
+
+      <form @submit.prevent="handleUrlSubmit">
+        <input type="text" id="input-url" name="url" size="40" placeholder="www.google.com" required
+          v-model.trim="longUrl" />
+        <input type="text" id="input-slug" name="slug" size="20" placeholder="Optionally, a slug like foobar" v-model.trim="slug" />
+        <input type="submit" id="input-submit" value="Shorten" />
+      </form>
+
+      <div class="message" v-if="shortUrl">
+        <p>Shortened URL is:</p>
+        <h2><a v-bind:href="shortUrl">{{ shortUrl }}</a>
+      </div>
+
+      <div class="message error" v-if="error">
+        <p>
+          Error shortening your link. Please ensure it's a valid URL and
+          starts with http:// or https://
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+<script>
+  const app = Vue.createApp({
+    data() {
+      return {
+        status: null,
+        slug: null,
+        longUrl: null,
+        shortUrl: null,
+        error: false,
+        errorMessage: null,
+      };
+    },
+    methods: {
+      handleUrlSubmit() {
+        fetch('/links', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            url: this.longUrl,
+            slug: this.slug ? this.slug.trim() : null,
+            status: this.status || 301,
+          }),
+        })
+        .then((response) => {
+          if (response.status == 200) {
+            this.error = false;
+            return response.json();
+          } else {
+            throw new Error('Issue saving URL');
+          }
+        })
+        .then((data) => {
+          this.shortUrl = data.shortened;
+        })
+        .catch((error) => {
+          this.error = true;
+        });
+      },
+    },
+  });
+  app.mount('#app');
+</script>
+
+</html>
