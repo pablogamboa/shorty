@@ -66,8 +66,8 @@
           },
           body: JSON.stringify({
             url: this.longUrl,
-            slug: this.slug ? this.slug.trim() : null,
-            status: this.status || 301,
+            slug: this.slug,
+            status: this.status,
           }),
         })
         .then((response) => {

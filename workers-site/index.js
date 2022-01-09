@@ -13,10 +13,30 @@ const nanoid = customAlphabet(
 );
 
 /**
+ * Normalizes a URL
+ * @param {String} url
+ * @returns normalized URL
+ */
+function normalizeUrl(url) {
+  // if the URL starts with uppercase then lowercase it as the user
+  // probably is entering the data from a phone keyboard
+  if (url.charAt(0) === url.charAt(0).toUpperCase()) {
+    url = url.charAt(0).toLowerCase() + url.slice(1);
+  }
+
+  // if the user forgot to add a protocol, let's asume it's https://
+  if (!url.startsWith('http')) {
+    url = 'https://' + url;
+  }
+
+  return url;
+}
+
+/**
  * Handler for getLink. Receives a slug, it returns a redirect or a 404.
  */
 router.get('/:slug', async request => {
-  const link = await SHORTY.get(request.params.slug, { type: "json" });
+  const link = await SHORTY.get(request.params.slug, { type: 'json' });
   if (!link) {
     return new Response('Not found.', {
       status: 404,
@@ -32,35 +52,56 @@ router.get('/:slug', async request => {
 router.post('/links', async request => {
   let { url, status, slug } = await request.json();
 
+  // process URL and make sure it's valid
+  if (!url) {
+    console.debug("User didn't pass a URL");
+    return new Response('Invalid URL.', { status: 400 });
+  }
+  url = normalizeUrl(url);
   if (!validator.isURL(url)) {
-    return new Response("Invalid URL.", { status: 400 });
+    console.warn('User passed an invalid URL', url);
+    return new Response('Invalid URL.', { status: 400 });
   }
 
+  // status must be a number and either 301 or 302
   if (!status) {
     status = 302;
-  } else if (status !== 301 && status !== 302) {
-    return new Response("Invalid status.", { status: 400 });
+  }
+  if (typeof status !== 'number' || (status !== 301 && status !== 302)) {
+    console.warn('User passed an invalid status', status);
+    return new Response('Invalid status.', { status: 400 });
   }
 
-  if (!slug) {
-    slug = nanoid();
-  } else if (typeof slug !== 'string' || slug.length < MIN_SLUG_LENGTH || slug.length > MAX_SLUG_LENGTH) {
-    return new Response("Invalid slug.", { status: 400 });
-  } else {
+  // process slug and make sure it's valid
+  if (slug) {
+    if (
+      typeof slug !== 'string' ||
+      slug.length < MIN_SLUG_LENGTH ||
+      slug.length > MAX_SLUG_LENGTH
+    ) {
+      console.warn('User passed an invalid slug', slug);
+      return new Response('Invalid slug.', { status: 400 });
+    }
+
+    // if the user passed a slug, make sure it doesn't exist already!
     const obj = await SHORTY.get(slug);
     if (obj) {
-      return new Response("Invalid slug.", { status: 409 });
+      console.warn("User passed a slug and it's taken already!", slug);
+      return new Response('Invalid slug.', { status: 409 });
     }
+  } else {
+    slug = nanoid();
   }
 
+  // now store the link, good for one day
   const body = JSON.stringify({ url, status, slug });
   await SHORTY.put(slug, body, { expirationTtl: 86400 });
 
-  const responseBody = {
-    slug,
-    shortened: `${new URL(request.url).origin}/${slug}`,
-  };
-  return new Response(JSON.stringify(responseBody), {
+  // finally send response back to caller.
+  const shortened = `${new URL(request.url).origin}/${slug}`;
+  console.info('Shortened', url, 'to', shortened);
+
+  return new Response(JSON.stringify({ slug, shortened }), {
     headers: { 'content-type': 'application/json' },
     status: 200,
   });
